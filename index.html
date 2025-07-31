@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Zip to Hospital</title>
+  <style>
+    body {
+      margin: 0;
+      background: #e9f5ff;
+      font-family: sans-serif;
+    }
+    .game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .node {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: white;
+      border: 2px solid #0077cc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      z-index: 1;
+      transition: background 0.2s;
+    }
+    .node.passed {
+      background: #c0ffc0;
+    }
+    .ambulance {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      font-size: 2rem;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    }
+    .hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.8);
+      padding: 10px 20px;
+      border-radius: 10px;
+      z-index: 100;
+    }
+    #restartBtn {
+      margin-top: 10px;
+      padding: 5px 10px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="game-container" id="game">
+  <div class="ambulance" id="ambulance">🚑</div>
+  <div class="hud">
+    ⏱ Time: <span id="timer">0.0</span> sec<br>
+    <button id="restartBtn">🔄 Restart</button>
+  </div>
+</div>
+
+<!-- Sound Effects -->
+<audio id="checkpoint-sound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+<audio id="success-sound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"></audio>
+
+<script>
+  const numPoints = 8;
+  const game = document.getElementById('game');
+  const ambulance = document.getElementById('ambulance');
+  const timerDisplay = document.getElementById('timer');
+  const restartBtn = document.getElementById('restartBtn');
+  const checkpointSound = document.getElementById('checkpoint-sound');
+  const successSound = document.getElementById('success-sound');
+
+  let nodes = [];
+  let currentStep = 1;
+  let startTime = null;
+  let timerInterval;
+
+  function startTimer() {
+    startTime = performance.now();
+    timerInterval = setInterval(() => {
+      const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+      timerDisplay.textContent = elapsed;
+    }, 100);
+  }
+
+  function stopTimer() {
+    clearInterval(timerInterval);
+  }
+
+  function createNodes() {
+    for (let i = 1; i <= numPoints; i++) {
+      const node = document.createElement('div');
+      node.classList.add('node');
+      node.textContent = i === numPoints ? '🏥' : i;
+      node.dataset.step = i;
+
+      node.style.top = `${Math.random() * 80 + 10}%`;
+      node.style.left = `${Math.random() * 80 + 10}%`;
+
+      game.appendChild(node);
+      nodes.push(node);
+
+      node.addEventListener('mouseenter', () => {
+        const step = parseInt(node.dataset.step);
+        if (step === currentStep) {
+          node.classList.add('passed');
+          checkpointSound.currentTime = 0;
+          checkpointSound.play();
+          currentStep++;
+          if (step === numPoints) {
+            stopTimer();
+            successSound.play();
+            alert(`🎉 You made it to the hospital in ${timerDisplay.textContent} seconds!`);
+          }
+        }
+      });
+    }
+  }
+
+  function resetGame() {
+    // Clear previous nodes
+    nodes.forEach(n => game.removeChild(n));
+    nodes = [];
+    currentStep = 1;
+    timerDisplay.textContent = '0.0';
+    stopTimer();
+    createNodes();
+    startTimer();
+  }
+
+  // Move ambulance with cursor
+  game.addEventListener('mousemove', e => {
+    ambulance.style.left = `${e.clientX}px`;
+    ambulance.style.top = `${e.clientY}px`;
+  });
+
+  restartBtn.addEventListener('click', resetGame);
+
+  // Start the game
+  resetGame();
+</script>
+
+</body>
+</html>
