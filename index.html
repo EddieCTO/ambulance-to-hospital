@@ -3,482 +3,382 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Zip to Hospital - Full Game</title>
+<title>Zip to Hospital - Spaced Path Version</title>
 <style>
   body {
-    font-family: Arial, sans-serif;
-    background: #eef6fa;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: 0; padding: 20px;
+    font-family: sans-serif;
+    margin: 10px;
     user-select: none;
   }
-  h1 {
-    margin-bottom: 0.2em;
-  }
-  #difficultySelector {
-    margin: 10px 0 20px 0;
-    font-size: 1rem;
-  }
   #game {
-    position: relative;
     display: grid;
     grid-template-columns: repeat(6, 60px);
     grid-template-rows: repeat(6, 60px);
-    gap: 5px;
-    touch-action: none;
+    gap: 4px;
+    width: max-content;
+    margin-bottom: 10px;
+    position: relative;
   }
   .cell {
-    width: 60px;
-    height: 60px;
-    background: white;
-    border: 2px solid #ccc;
+    border: 1px solid #ccc;
+    background: #f0f0f0;
     display: flex;
-    align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
-    box-sizing: border-box;
+    align-items: center;
+    font-size: 22px;
+    cursor: pointer;
+    position: relative;
   }
-  .cell.hospital {
-    background: #ffe5e5;
-    font-size: 1.6rem;
+  .cell.empty {
+    background: #eee;
   }
   .cell.visited {
-    background: #90e090;
+    background: #a0d7a0;
+  }
+  .cell.current {
+    outline: 3px solid #007700;
+  }
+  .icon {
+    position: absolute;
+    font-size: 30px;
+    pointer-events: none;
+    user-select: none;
+    transition: top 0.1s, left 0.1s;
+  }
+  #ambulance {
+    color: red;
+  }
+  #hospital {
+    color: green;
   }
   #message {
-    margin-top: 15px;
+    margin-top: 8px;
     font-weight: bold;
-    min-height: 1.2em;
   }
-  #restart {
-    margin-top: 15px;
-    padding: 8px 14px;
-    font-size: 1rem;
-    cursor: pointer;
-  }
-  svg#pathLines {
-    position: absolute;
-    pointer-events: none;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    overflow: visible;
-  }
-  #timer {
-    font-size: 1.1rem;
+  #controls {
     margin-top: 10px;
-    font-weight: bold;
-  }
-  #leaderboard {
-    margin-top: 20px;
-    width: 90vmin;
-    max-width: 360px;
-    background: white;
-    border: 2px solid #ccc;
-    padding: 10px;
-    font-size: 0.9rem;
-  }
-  #leaderboard h2 {
-    margin-top: 0;
-    font-size: 1.1rem;
-  }
-  #leaderboard ul {
-    list-style: none;
-    padding-left: 0;
-    margin: 0;
-  }
-  #leaderboard li {
-    margin: 4px 0;
   }
 </style>
 </head>
 <body>
 
-<h1>🚑 Zip to Hospital</h1>
-<label for="difficultySelector">Choose difficulty (steps): </label>
-<select id="difficultySelector">
-  <option value="8">Easy (8 steps)</option>
-  <option value="10">Medium (10 steps)</option>
-  <option value="12">Hard (12 steps)</option>
-</select>
-
+<h2>Zip to Hospital (Spaced Path Version)</h2>
 <div id="game"></div>
-<svg id="pathLines"></svg>
 
-<div id="timer">Time: 0.00 s</div>
-<div id="message"></div>
-<button id="restart">🔄 Restart</button>
+<div id="ambulance" class="icon">🚑</div>
+<div id="hospital" class="icon">🏥</div>
 
-<div id="leaderboard">
-  <h2>🏆 Leaderboard</h2>
-  <div>Select difficulty above and play to add your time here.</div>
-  <ul id="leaderboardList"></ul>
+<div id="message">Start at the ambulance (🚑) and trace the path to the hospital (🏥) through all points in order.</div>
+
+<div id="controls">
+  Difficulty: 
+  <select id="difficulty">
+    <option value="8">8 steps</option>
+    <option value="10">10 steps</option>
+    <option value="12">12 steps</option>
+  </select>
+  <button id="restartBtn">Restart</button>
+  <div id="timer">Time: 0.00 s</div>
+  <h3>Leaderboard</h3>
+  <ol id="leaderboard"></ol>
 </div>
 
 <script>
+(() => {
   const size = 6;
-  const game = document.getElementById('game');
-  const message = document.getElementById('message');
-  const restartBtn = document.getElementById('restart');
-  const difficultySelector = document.getElementById('difficultySelector');
-  const timerDisplay = document.getElementById('timer');
-  const pathLinesSVG = document.getElementById('pathLines');
-  const leaderboardList = document.getElementById('leaderboardList');
-
-  let path = [];
-  let visited = new Set();
-  let currentStep = 0;
+  let pathPoints = []; // array of numbered points e.g. [[r,c],...]
+  let fullTracePath = []; // full traced path including in-between empty cells
+  let visited = new Set(); // string keys "r,c" of visited cells
+  let currentIndex = 0; // index in fullTracePath of next expected cell
   let dragging = false;
-  let grid = [];
-  let timer = null;
-  let startTime = null;
   let finished = false;
 
-  // Helpers for coords keys
-  function coordKey(r, c) {
-    return `${r},${c}`;
-  }
+  const game = document.getElementById('game');
+  const ambulance = document.getElementById('ambulance');
+  const hospital = document.getElementById('hospital');
+  const message = document.getElementById('message');
+  const difficultySelector = document.getElementById('difficulty');
+  const restartBtn = document.getElementById('restartBtn');
+  const timerDisplay = document.getElementById('timer');
+  const leaderboardList = document.getElementById('leaderboard');
 
-  // Directions for path generation
-  const directions = [
-    [0, 1],  // right
-    [1, 0],  // down
-    [0, -1], // left
-    [-1, 0]  // up
-  ];
+  let startTime = 0;
+  let timerId = null;
 
-  // Create grid HTML + data structure
+  // Create grid cells
+  const grid = [];
   function createGrid() {
     game.innerHTML = '';
-    pathLinesSVG.innerHTML = '';
-    message.textContent = '';
-    currentStep = 0;
-    visited.clear();
-    dragging = false;
-    finished = false;
-    stopTimer();
-
-    grid = [];
-    for (let r = 0; r < size; r++) {
+    grid.length = 0;
+    for(let r=0; r<size; r++) {
       const row = [];
-      for (let c = 0; c < size; c++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.dataset.row = r;
-        cell.dataset.col = c;
-        game.appendChild(cell);
-        row.push(cell);
+      for(let c=0; c<size; c++) {
+        const div = document.createElement('div');
+        div.classList.add('cell', 'empty');
+        div.dataset.r = r;
+        div.dataset.c = c;
+        game.appendChild(div);
+        row.push(div);
       }
       grid.push(row);
     }
   }
 
-  // Auto-generate a path of N steps (length) in the grid
-  // Backtracking + DFS style to ensure solvable and no crosses
-  function generatePath(length) {
-    const maxAttempts = 5000;
-    let attempts = 0;
+  // Manhattan distance helper
+  function manhattanDist(a, b) {
+    return Math.abs(a[0]-b[0]) + Math.abs(a[1]-b[1]);
+  }
 
-    function isValidStep(pathSoFar, next) {
-      const [nr, nc] = next;
-      if (nr < 0 || nr >= size || nc < 0 || nc >= size) return false;
-      // No repeats
-      if (pathSoFar.some(([r,c]) => r === nr && c === nc)) return false;
+  // Generate spaced points with minimum gap between consecutive points
+  function generateSpacedPoints(n) {
+    const points = [];
+    const minGap = 2; // min Manhattan gap between consecutive points
 
-      // Check for path crossing:
-      // We must ensure that the new segment doesn't intersect any previous segment.
-      // Since path moves only horizontally or vertically, crossing means:
-      // New segment crosses any old segment that is not adjacent in the path.
-      // For simplicity, we'll only allow moves that are adjacent to the last point.
-      // So crossing can't happen if we don't allow skipping cells.
-      // This check can be omitted because path is linear and no jumps allowed.
-      // However, we'll keep the rule that next step must be adjacent horizontally or vertically.
-
-      const last = pathSoFar[pathSoFar.length - 1];
-      const dr = Math.abs(nr - last[0]);
-      const dc = Math.abs(nc - last[1]);
-      if (dr + dc !== 1) return false;
-
-      return true;
+    function randomCell() {
+      return [Math.floor(Math.random()*size), Math.floor(Math.random()*size)];
     }
 
-    // Depth-first search with backtracking to find a path of length N
-    function dfs(pathSoFar) {
-      if (pathSoFar.length === length) return pathSoFar;
-
-      const last = pathSoFar[pathSoFar.length - 1];
-      // Shuffle directions to randomize path
-      const dirs = directions.sort(() => Math.random() - 0.5);
-
-      for (const [dr, dc] of dirs) {
-        const next = [last[0] + dr, last[1] + dc];
-        if (isValidStep(pathSoFar, next)) {
-          const res = dfs([...pathSoFar, next]);
-          if (res) return res;
+    let attempts = 0;
+    while(points.length < n && attempts < 1000) {
+      const candidate = randomCell();
+      if(points.some(p => p[0]===candidate[0] && p[1]===candidate[1])) {
+        attempts++;
+        continue; // avoid duplicates
+      }
+      if(points.length === 0) {
+        points.push(candidate);
+      } else {
+        // Check min gap with last point
+        if(manhattanDist(points[points.length-1], candidate) >= minGap) {
+          points.push(candidate);
+        } else {
+          attempts++;
+          continue;
         }
       }
-      return null;
-    }
-
-    // Try multiple attempts to generate a path starting at a random cell
-    while (attempts < maxAttempts) {
       attempts++;
-      const startRow = Math.floor(Math.random() * size);
-      const startCol = Math.floor(Math.random() * size);
-      const res = dfs([[startRow, startCol]]);
-      if (res) return res;
     }
-    // If fail, fallback path:
-    return [[0,0],[0,1],[0,2],[1,2],[2,2],[2,3],[2,4],[2,5]].slice(0,length);
-  }
-
-  // Draw numbers and ambulance/hospital icons on path cells
-  function drawPath() {
-    path.forEach(([r, c], i) => {
-      const cell = grid[r][c];
-      cell.textContent = '';
-      cell.classList.remove('hospital');
-      if (i === 0) {
-        // Ambulance emoji for start
-        cell.textContent = '🚑';
-      } else if (i === path.length - 1) {
-        cell.textContent = '🏥';
-        cell.classList.add('hospital');
-      } else {
-        cell.textContent = i + 1;
+    if(points.length < n) {
+      // fallback: fill with any random points if failed
+      while(points.length < n) {
+        const c = randomCell();
+        if(!points.some(p => p[0]===c[0] && p[1]===c[1])) points.push(c);
       }
+    }
+    return points;
+  }
+
+  // BFS pathfinding for shortest path from start to end on grid ignoring visited except start/end
+  function bfsPath(start, end, blocked= new Set()) {
+    const queue = [[start]];
+    const seen = new Set([start.join(',')]);
+    while(queue.length > 0) {
+      const path = queue.shift();
+      const [r,c] = path[path.length-1];
+      if(r === end[0] && c === end[1]) return path;
+
+      const neighbors = [
+        [r-1,c],[r+1,c],[r,c-1],[r,c+1]
+      ].filter(([nr,nc]) => nr>=0 && nr<size && nc>=0 && nc<size);
+      for(const n of neighbors) {
+        const key = n.join(',');
+        if(seen.has(key)) continue;
+        if(blocked.has(key)) continue;
+        seen.add(key);
+        queue.push(path.concat([n]));
+      }
+    }
+    return null; // no path found
+  }
+
+  // Build full tracing path (including empty cells between numbered points)
+  function buildFullTracePath(points) {
+    let fullPath = [];
+    for(let i=0; i<points.length-1; i++) {
+      // block cells that are numbered except current start and end points
+      const blocked = new Set(points.map(p => p.join(',')));
+      blocked.delete(points[i].join(','));
+      blocked.delete(points[i+1].join(','));
+      const segment = bfsPath(points[i], points[i+1], blocked);
+      if(!segment) {
+        // no path found, fail
+        return null;
+      }
+      // Add all except last cell (to avoid duplication) except last segment adds all
+      if(i < points.length-2) {
+        fullPath = fullPath.concat(segment.slice(0, -1));
+      } else {
+        fullPath = fullPath.concat(segment);
+      }
+    }
+    return fullPath;
+  }
+
+  // Render numbers and clear grid classes
+  function renderGrid() {
+    for(let r=0; r<size; r++) {
+      for(let c=0; c<size; c++) {
+        grid[r][c].className = 'cell empty';
+        grid[r][c].textContent = '';
+      }
+    }
+    pathPoints.forEach((p,i) => {
+      const cell = grid[p[0]][p[1]];
+      cell.textContent = i+1;
+      cell.classList.remove('empty');
+      cell.classList.add('number');
     });
   }
 
-  // Draw SVG lines connecting visited cells in order
-  function updatePathLines() {
-    pathLinesSVG.innerHTML = '';
-    if (currentStep < 2) return; // need at least 2 points
+  // Update ambulance and hospital icon positions
+  function updateIcons() {
+    // ambulance at current traced position, or start if no moves yet
+    let pos;
+    if(currentIndex === 0) pos = pathPoints[0];
+    else pos = fullTracePath[currentIndex-1];
+    positionIcon(ambulance, pos);
 
-    for (let i = 1; i < currentStep; i++) {
-      const [r1, c1] = path[i-1];
-      const [r2, c2] = path[i];
-      const cell1 = grid[r1][c1];
-      const cell2 = grid[r2][c2];
-
-      const rect1 = cell1.getBoundingClientRect();
-      const rect2 = cell2.getBoundingClientRect();
-      const svgRect = pathLinesSVG.getBoundingClientRect();
-
-      const x1 = rect1.left + rect1.width / 2 - svgRect.left;
-      const y1 = rect1.top + rect1.height / 2 - svgRect.top;
-      const x2 = rect2.left + rect2.width / 2 - svgRect.left;
-      const y2 = rect2.top + rect2.height / 2 - svgRect.top;
-
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute('x1', x1);
-      line.setAttribute('y1', y1);
-      line.setAttribute('x2', x2);
-      line.setAttribute('y2', y2);
-      line.setAttribute('stroke', '#007700');
-      line.setAttribute('stroke-width', '6');
-      line.setAttribute('stroke-linecap', 'round');
-      pathLinesSVG.appendChild(line);
-    }
+    // hospital always at last numbered point
+    positionIcon(hospital, pathPoints[pathPoints.length-1]);
   }
 
-  // Timer functions
-  function startTimer() {
-    if (timer) return;
-    startTime = performance.now();
-    timer = requestAnimationFrame(updateTimer);
-  }
-  function updateTimer() {
-    if (!timer) return;
-    const elapsed = (performance.now() - startTime) / 1000;
-    timerDisplay.textContent = `Time: ${elapsed.toFixed(2)} s`;
-    timer = requestAnimationFrame(updateTimer);
-  }
-  function stopTimer() {
-    if (timer) {
-      cancelAnimationFrame(timer);
-      timer = null;
-    }
+  // Position an icon over grid cell
+  function positionIcon(icon, [r,c]) {
+    const cell = grid[r][c];
+    const rect = cell.getBoundingClientRect();
+    const gameRect = game.getBoundingClientRect();
+    icon.style.top = (rect.top - gameRect.top + rect.height/2 - icon.offsetHeight/2) + 'px';
+    icon.style.left = (rect.left - gameRect.left + rect.width/2 - icon.offsetWidth/2) + 'px';
   }
 
-  // Leaderboard save/load for each difficulty (localStorage)
-  function saveLeaderboard(difficulty, time) {
-    const key = 'zipToHospitalLeaderboard-' + difficulty;
-    const board = JSON.parse(localStorage.getItem(key)) || [];
-    board.push(time);
-    board.sort((a,b) => a-b);
-    if (board.length > 5) board.length = 5; // keep top 5
-    localStorage.setItem(key, JSON.stringify(board));
-    loadLeaderboard(difficulty);
-  }
-  function loadLeaderboard(difficulty) {
-    const key = 'zipToHospitalLeaderboard-' + difficulty;
-    const board = JSON.parse(localStorage.getItem(key)) || [];
-    leaderboardList.innerHTML = '';
-    if (board.length === 0) {
-      leaderboardList.innerHTML = '<li>No records yet</li>';
-      return;
-    }
-    board.forEach((t, i) => {
-      const li = document.createElement('li');
-      li.textContent = `${i+1}. ${t.toFixed(2)} seconds`;
-      leaderboardList.appendChild(li);
-    });
+  // Reset visited and UI
+  function resetState() {
+    visited.clear();
+    currentIndex = 0;
+    finished = false;
+    message.textContent = 'Start at the ambulance (🚑) and trace the path to the hospital (🏥) through all points in order.';
+    timerDisplay.textContent = 'Time: 0.00 s';
+    clearTimer();
+    updateIcons();
+    renderGrid();
+    updateVisitedUI();
   }
 
-  // Convert mouse/touch coords to grid cell [r,c]
-  function coordsToCell(x, y) {
-    const rect = game.getBoundingClientRect();
-    const gx = x - rect.left;
-    const gy = y - rect.top;
-    if (gx < 0 || gy < 0 || gx > rect.width || gy > rect.height) return null;
-    const c = Math.floor(gx / (rect.width / size));
-    const r = Math.floor(gy / (rect.height / size));
-    if (r < 0 || r >= size || c < 0 || c >= size) return null;
-    return [r,c];
-  }
-
-  // Validate step is next in path and adjacent to current
-  function isValidMove(r, c) {
-    if (finished) return false;
-    if (currentStep >= path.length) return false;
-    const expected = path[currentStep];
-    if (r !== expected[0] || c !== expected[1]) return false; // must follow order
-
-    // Must be adjacent to last visited
-    if (currentStep === 0) return true; // first step always valid
-    const [lr, lc] = path[currentStep - 1];
-    const dr = Math.abs(r - lr);
-    const dc = Math.abs(c - lc);
-    if (dr + dc !== 1) return false;
-
-    // Cannot revisit cells (path already defined, so this is guaranteed)
-    return true;
-  }
-
-  // Mark cells visited up to currentStep
-  function markVisited() {
+  // Mark visited cells in UI
+  function updateVisitedUI() {
+    // Clear all visited classes
     for(let r=0; r<size; r++) {
       for(let c=0; c<size; c++) {
         grid[r][c].classList.remove('visited');
+        grid[r][c].classList.remove('current');
       }
     }
-    for(let i=0; i<currentStep; i++) {
-      const [r,c] = path[i];
+    // Mark visited
+    for(let cellStr of visited) {
+      const [r,c] = cellStr.split(',').map(Number);
       grid[r][c].classList.add('visited');
     }
+    // Current cell highlight
+    if(currentIndex > 0) {
+      const [r,c] = fullTracePath[currentIndex-1];
+grid[r][c].classList.add('current');
+}
+}
+
+// Start timer
+function startTimer() {
+startTime = performance.now();
+timerId = setInterval(() => {
+const elapsed = (performance.now() - startTime) / 1000;
+timerDisplay.textContent = Time: ${elapsed.toFixed(2)} s;
+}, 100);
+}
+
+function clearTimer() {
+if(timerId) clearInterval(timerId);
+timerId = null;
+}
+
+function saveToLeaderboard(seconds) {
+const key = zip_leaderboard_${difficultySelector.value};
+const scores = JSON.parse(localStorage.getItem(key) || "[]");
+scores.push(seconds);
+scores.sort((a,b)=>a-b);
+if(scores.length > 10) scores.length = 10;
+localStorage.setItem(key, JSON.stringify(scores));
+}
+
+function renderLeaderboard() {
+const key = zip_leaderboard_${difficultySelector.value};
+const scores = JSON.parse(localStorage.getItem(key) || "[]");
+leaderboardList.innerHTML = '';
+for(let score of scores) {
+const li = document.createElement('li');
+li.textContent = ${score.toFixed(2)} s;
+leaderboardList.appendChild(li);
+}
+}
+
+function setupGame() {
+const n = parseInt(difficultySelector.value);
+createGrid();
+pathPoints = generateSpacedPoints(n);
+fullTracePath = buildFullTracePath(pathPoints);
+if(!fullTracePath) {
+setupGame(); // retry
+return;
+}
+renderGrid();
+resetState();
+updateIcons();
+renderLeaderboard();
+}
+
+// Handle drag tracing
+game.addEventListener('mousedown', e => {
+if(finished) return;
+dragging = true;
+if(timerId === null) startTimer();
+});
+game.addEventListener('mouseup', e => {
+dragging = false;
+});
+game.addEventListener('mouseleave', e => {
+dragging = false;
+});
+game.addEventListener('mousemove', e => {
+if(!dragging || finished) return;
+const target = e.target;
+if(!target.classList.contains('cell')) return;
+const r = parseInt(target.dataset.r);
+const c = parseInt(target.dataset.c);
+const key = ${r},${c};
+
+if(currentIndex >= fullTracePath.length) return;
+
+const [er,ec] = fullTracePath[currentIndex];
+if(r===er && c===ec && !visited.has(key)) {
+  visited.add(key);
+  currentIndex++;
+  updateVisitedUI();
+  updateIcons();
+
+  if(currentIndex === fullTracePath.length) {
+    finished = true;
+    clearTimer();
+    const time = (performance.now() - startTime)/1000;
+    message.textContent = `🎉 Success! Time: ${time.toFixed(2)} s`;
+    saveToLeaderboard(time);
+    renderLeaderboard();
   }
+}
+});
 
-  // Handle drag start
-  function onPointerDown(e) {
-    e.preventDefault();
-    if (finished) return;
-    dragging = true;
-    const [r,c] = coordsToCell(e.clientX, e.clientY);
-    if (r === undefined) return;
-    if (r === path[0][0] && c === path[0][1]) {
-      currentStep = 1; // start tracing
-      markVisited();
-      updatePathLines();
-      startTimer();
-      message.textContent = 'Tracing path...';
-    } else {
-      message.textContent = 'Start at the ambulance (🚑)';
-      dragging = false;
-    }
-  }
+restartBtn.onclick = setupGame;
+difficultySelector.onchange = setupGame;
 
-  // Handle drag move
-  function onPointerMove(e) {
-    if (!dragging) return;
-    const pos = coordsToCell(e.clientX, e.clientY);
-    if (!pos) return;
-    const [r,c] = pos;
-
-    if (isValidMove(r, c)) {
-      currentStep++;
-      markVisited();
-      updatePathLines();
-
-      // Play checkpoint sound
-      playCheckpointSound();
-
-      if (currentStep === path.length) {
-        finished = true;
-        stopTimer();
-        message.textContent = '🎉 You reached the hospital! Well done!';
-
-        // Save time to leaderboard
-        const elapsed = (performance.now() - startTime) / 1000;
-        saveLeaderboard(difficultySelector.value, elapsed);
-
-        // Play success sound
-        playSuccessSound();
-      }
-    }
-  }
-
-  // Handle drag end
-  function onPointerUp(e) {
-    if (!dragging) return;
-    dragging = false;
-    if (!finished) {
-      message.textContent = 'Incomplete path, try again or restart.';
-    }
-  }
-
-  // Sounds
-  let checkpointAudio = null;
-  let successAudio = null;
-
-  function loadSounds() {
-    checkpointAudio = new Audio('https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg');
-    successAudio = new Audio('https://actions.google.com/sounds/v1/cartoon/clang.ogg');
-  }
-  function playCheckpointSound() {
-    if (!checkpointAudio) return;
-    checkpointAudio.currentTime = 0;
-    checkpointAudio.play();
-  }
-  function playSuccessSound() {
-    if (!successAudio) return;
-    successAudio.currentTime = 0;
-    successAudio.play();
-  }
-
-  // Initialize the game for chosen difficulty
-  function initGame() {
-    createGrid();
-    const difficulty = parseInt(difficultySelector.value, 10);
-    path = generatePath(difficulty);
-    drawPath();
-    currentStep = 0;
-    markVisited();
-    updatePathLines();
-    message.textContent = 'Start at the ambulance (🚑) and trace the path to the hospital (🏥)';
-    timerDisplay.textContent = 'Time: 0.00 s';
-    loadLeaderboard(difficultySelector.value);
-    stopTimer();
-  }
-
-  // Event listeners
-  game.addEventListener('pointerdown', onPointerDown);
-  window.addEventListener('pointermove', onPointerMove);
-  window.addEventListener('pointerup', onPointerUp);
-
-  restartBtn.addEventListener('click', () => {
-    initGame();
-  });
-
-  difficultySelector.addEventListener('change', () => {
-    initGame();
-  });
-
-  // Start the first game
-  loadSounds();
-  initGame();
-
+setupGame();
+})();
 </script>
-</body>
-</html>
+
+</body> </html>
