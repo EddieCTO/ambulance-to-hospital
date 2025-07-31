@@ -7,12 +7,12 @@
   <style>
     body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
     #game { display: grid; grid-template-columns: repeat(6, 60px); grid-template-rows: repeat(6, 60px); gap: 2px; margin-top: 20px; touch-action: none; position: relative; }
-    .cell { width: 60px; height: 60px; background: #f0f0f0; display: flex; justify-content: center; align-items: center; border: 1px solid #ccc; font-weight: bold; font-size: 18px; position: relative; }
+    .cell { width: 60px; height: 60px; background: #f0f0f0; display: flex; justify-content: center; align-items: center; border: 1px solid #ccc; font-weight: bold; font-size: 18px; user-select:none; }
     .numbered { background: #d9faff; }
     .visited { background: #88ff88; }
     .current { background: #ffe066; }
     .invalid { background: #ff6b6b; }
-    .solution-path { background: #cfc; z-index: 1; }
+    .solution { background: #cfc; }
     #controls { margin-top: 10px; }
     canvas {
       position: absolute;
@@ -34,6 +34,7 @@
   </select>
   <button id="restart">Restart</button>
   <button id="hint">Hint</button>
+  <button id="toggleSolution">Show Full Solution</button>
   <span id="timer">Time: 0.00s</span>
 </div>
 <div id="game"></div>
@@ -48,6 +49,7 @@
   const difficultySelect = document.getElementById('difficulty');
   const message = document.getElementById('message');
   const hintBtn = document.getElementById('hint');
+  const toggleBtn = document.getElementById('toggleSolution');
   const canvas = document.getElementById('traceCanvas');
   const ctx = canvas.getContext('2d');
 
@@ -61,6 +63,9 @@
   let visitedSet = new Set();
   let startTime = 0;
   let timerInterval = null;
+
+  let hintAnimating = false;
+  let showFullSolution = false;
 
   function positionCanvas() {
     const rect = game.getBoundingClientRect();
@@ -87,6 +92,7 @@
     }
   }
 
+  // Generates a Hamiltonian path (visiting every cell exactly once)
   function generateHamiltonianPath() {
     const visited = Array.from({ length: size }, () => Array(size).fill(false));
     const path = [];
@@ -115,6 +121,7 @@
     return generateHamiltonianPath();
   }
 
+  // Select numbered points spread across the path by sampling evenly
   function selectNumberedPoints(path, count) {
     const step = Math.floor(path.length / count);
     return Array.from({ length: count }, (_, i) => path[i * step]);
@@ -135,13 +142,13 @@
     }
   }
 
-  function drawTraceLine() {
+  function drawTraceLine(path) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.strokeStyle = 'blue';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    for (let i = 0; i < visitedPath.length; i++) {
-      const [r, c] = visitedPath[i];
+    for (let i = 0; i < path.length; i++) {
+      const [r, c] = path[i];
       const x = c * 60 + 30;
       const y = r * 60 + 30;
       if (i === 0) ctx.moveTo(x, y);
@@ -150,10 +157,34 @@
     ctx.stroke();
   }
 
-  function showSolution() {
-    for (let [r, c] of solutionPath) {
-      grid[r][c].classList.add('solution-path');
+  // Animate solution trace (shows numbered path or full solution)
+  async function animateSolution(path) {
+    hintAnimating = true;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = 'green';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+
+    for (let i = 0; i < path.length; i++) {
+      const [r, c] = path[i];
+      const x = c * 60 + 30;
+      const y = r * 60 + 30;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.beginPath();
+      for (let j = 0; j <= i; j++) {
+        const [rr, cc] = path[j];
+        const xx = cc * 60 + 30;
+        const yy = rr * 60 + 30;
+        if (j === 0) ctx.moveTo(xx, yy);
+        else ctx.lineTo(xx, yy);
+      }
+      ctx.stroke();
+      await new Promise(res => setTimeout(res, 150));
     }
+    hintAnimating = false;
   }
 
   function startTimer() {
@@ -170,6 +201,7 @@
   }
 
   function resetGame() {
+    if (hintAnimating) return; // Prevent reset while hint animates
     createGrid();
     const n = parseInt(difficultySelect.value);
     const path = generateHamiltonianPath();
@@ -184,74 +216,114 @@
     timerDisplay.textContent = 'Time: 0.00s';
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     positionCanvas();
+    showFullSolution = false;
+    toggleBtn.textContent = "Show Full Solution";
   }
 
-  function handleCellHover(e) {
-    if (!dragging) return;
-    const cell = e.target;
-    if (!cell.classList.contains('cell')) return;
-    const r = parseInt(cell.dataset.r);
-    const c = parseInt(cell.dataset.c);
+  function handleCellEnter(r, c) {
+    if (!dragging || hintAnimating) return;
     const key = `${r},${c}`;
     if (visitedSet.has(key)) return;
 
     if (visitedPath.length > 0) {
       const [lr, lc] = visitedPath[visitedPath.length - 1];
-      if (!(Math.abs(r - lr) + Math.abs(c - lc) === 1)) return;
+      if (!(Math.abs(r - lr) + Math.abs(c - lc) === 1)) return; // Only adjacent moves
     }
 
     visitedPath.push([r, c]);
     visitedSet.add(key);
-    cell.classList.add('visited');
-    drawTraceLine();
+    grid[r][c].classList.add('visited');
 
-    const [targetR, targetC] = numberedPoints[currentIndex];
-    if (r === targetR && c === targetC) {
-      currentIndex++;
-      cell.classList.add('current');
-      if (currentIndex === numberedPoints.length && visitedPath.length === size * size) {
-        message.textContent = `🎉 Success! Time: ${((performance.now() - startTime) / 1000).toFixed(2)}s`;
-        stopTimer();
-        dragging = false;
+    // Check if on correct numbered point in order
+    if (currentIndex < numberedPoints.length) {
+      const [nr, nc] = numberedPoints[currentIndex];
+      if (r === nr && c === nc) {
+        currentIndex++;
+        if (currentIndex === 1) startTimer();
+        if (currentIndex === numberedPoints.length) {
+          stopTimer();
+          message.textContent = "🎉 You reached the hospital! Well done!";
+        }
+      } else {
+        // If visiting an incorrect numbered point or skipping order
+        message.textContent = 'Wrong order or invalid path!';
+        grid[r][c].classList.add('invalid');
       }
-    } else if (grid[r][c].textContent !== '') {
-      cell.classList.add('invalid');
-      message.textContent = `❌ Wrong number order!`;
-      dragging = false;
-      stopTimer();
-      showSolution();
     }
   }
 
-  game.addEventListener('mousedown', (e) => {
-    if (e.target.classList.contains('cell')) {
+  // Mouse and touch event handlers
+  function onPointerDown(e) {
+    if (hintAnimating) return;
+    dragging = true;
+    const target = e.target;
+    if (target.classList.contains('cell')) {
+      const r = parseInt(target.dataset.r);
+      const c = parseInt(target.dataset.c);
       visitedPath = [];
       visitedSet.clear();
-      for (let row of grid) {
-        for (let cell of row) {
-          cell.classList.remove('visited', 'invalid', 'current', 'solution-path');
-        }
-      }
+      grid.flat().forEach(cell => cell.classList.remove('visited', 'invalid'));
       currentIndex = 0;
-      dragging = true;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      startTimer();
+      message.textContent = '';
+      handleCellEnter(r, c);
     }
-  });
+    e.preventDefault();
+  }
+  function onPointerMove(e) {
+    if (!dragging || hintAnimating) return;
+    let target = e.target;
+    if (!target.classList.contains('cell')) {
+      // Touch move might not target cell, try elementFromPoint
+      const touch = e.touches ? e.touches[0] : null;
+      if (touch) {
+        target = document.elementFromPoint(touch.clientX, touch.clientY);
+      }
+      if (!target || !target.classList.contains('cell')) return;
+    }
+    const r = parseInt(target.dataset.r);
+    const c = parseInt(target.dataset.c);
+    handleCellEnter(r, c);
+  }
+  function onPointerUp(e) {
+    dragging = false;
+  }
 
-  game.addEventListener('mouseup', () => dragging = false);
-  game.addEventListener('mouseleave', () => dragging = false);
-  game.addEventListener('mousemove', handleCellHover);
+  // Hint button click
+  async function showHint() {
+    if (hintAnimating) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (showFullSolution) {
+      await animateSolution(solutionPath);
+    } else {
+      await animateSolution(numberedPoints);
+    }
+  }
 
-  restartBtn.onclick = resetGame;
-  difficultySelect.onchange = resetGame;
-  hintBtn.onclick = () => {
-    stopTimer();
-    showSolution();
-    message.textContent = '🧠 Hint: Light green path is the full solution';
-  };
+  // Toggle solution display mode
+  function toggleSolution() {
+    showFullSolution = !showFullSolution;
+    toggleBtn.textContent = showFullSolution ? "Show Numbered Path" : "Show Full Solution";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (showFullSolution) {
+      drawTraceLine(solutionPath);
+    } else {
+      drawTraceLine(numberedPoints);
+    }
+  }
 
+  // Init
+  createGrid();
   resetGame();
+
+  // Event listeners
+  game.addEventListener('pointerdown', onPointerDown);
+  game.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+
+  restartBtn.addEventListener('click', resetGame);
+  hintBtn.addEventListener('click', showHint);
+  toggleBtn.addEventListener('click', toggleSolution);
+  difficultySelect.addEventListener('change', resetGame);
 })();
 </script>
 </body>
