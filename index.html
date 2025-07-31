@@ -122,9 +122,17 @@
   }
 
   // Select numbered points spread across the path by sampling evenly
+  // but force last numbered point to be the last cell in path (hospital)
   function selectNumberedPoints(path, count) {
-    const step = Math.floor(path.length / count);
-    return Array.from({ length: count }, (_, i) => path[i * step]);
+    const points = [];
+    const step = Math.floor((path.length - 1) / (count - 1)); // spread but reserve last point
+
+    for (let i = 0; i < count - 1; i++) {
+      points.push(path[i * step]);
+    }
+    points.push(path[path.length - 1]); // last point is hospital
+
+    return points;
   }
 
   function renderPoints() {
@@ -216,19 +224,19 @@
     timerDisplay.textContent = 'Time: 0.00s';
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     positionCanvas();
-    showFullSolution = false;
-    toggleBtn.textContent = "Show Full Solution";
+  }
+
+  // Check if next cell is adjacent and valid
+  function isAdjacent(r1, c1, r2, c2) {
+    return (Math.abs(r1 - r2) + Math.abs(c1 - c2)) === 1;
   }
 
   function handleCellEnter(r, c) {
-    if (!dragging || hintAnimating) return;
+    if (hintAnimating) return;
     const key = `${r},${c}`;
-    if (visitedSet.has(key)) return;
-
-    if (visitedPath.length > 0) {
-      const [lr, lc] = visitedPath[visitedPath.length - 1];
-      if (!(Math.abs(r - lr) + Math.abs(c - lc) === 1)) return; // Only adjacent moves
-    }
+    const last = visitedPath.length ? visitedPath[visitedPath.length - 1] : null;
+    if (visitedSet.has(key)) return; // no revisiting cells
+    if (last && !isAdjacent(last[0], last[1], r, c)) return; // only adjacent moves allowed
 
     visitedPath.push([r, c]);
     visitedSet.add(key);
