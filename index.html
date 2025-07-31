@@ -7,12 +7,12 @@
   <style>
     body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
     #game { display: grid; grid-template-columns: repeat(6, 60px); grid-template-rows: repeat(6, 60px); gap: 2px; margin-top: 20px; touch-action: none; position: relative; }
-    .cell { width: 60px; height: 60px; background: #f0f0f0; display: flex; justify-content: center; align-items: center; border: 1px solid #ccc; font-weight: bold; font-size: 18px; }
+    .cell { width: 60px; height: 60px; background: #f0f0f0; display: flex; justify-content: center; align-items: center; border: 1px solid #ccc; font-weight: bold; font-size: 18px; position: relative; }
     .numbered { background: #d9faff; }
     .visited { background: #88ff88; }
     .current { background: #ffe066; }
     .invalid { background: #ff6b6b; }
-    .solution { background: #cfc; }
+    .solution-path { background: #cfc; z-index: 1; }
     #controls { margin-top: 10px; }
     canvas {
       position: absolute;
@@ -152,7 +152,7 @@
 
   function showSolution() {
     for (let [r, c] of solutionPath) {
-      grid[r][c].classList.add('solution');
+      grid[r][c].classList.add('solution-path');
     }
   }
 
@@ -229,7 +229,7 @@
       visitedSet.clear();
       for (let row of grid) {
         for (let cell of row) {
-          cell.classList.remove('visited', 'invalid', 'current', 'solution');
+          cell.classList.remove('visited', 'invalid', 'current', 'solution-path');
         }
       }
       currentIndex = 0;
@@ -248,7 +248,7 @@
   hintBtn.onclick = () => {
     stopTimer();
     showSolution();
-    message.textContent = '🧠 Hint: Green shows the full path';
+    message.textContent = '🧠 Hint: Light green path is the full solution';
   };
 
   resetGame();
