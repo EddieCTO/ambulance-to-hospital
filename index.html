@@ -6,7 +6,7 @@
   <title>Zip to Hospital Game</title>
   <style>
     body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
-    #game { display: grid; grid-template-columns: repeat(6, 60px); grid-template-rows: repeat(6, 60px); gap: 2px; margin-top: 20px; touch-action: none; }
+    #game { display: grid; grid-template-columns: repeat(6, 60px); grid-template-rows: repeat(6, 60px); gap: 2px; margin-top: 20px; touch-action: none; position: relative; }
     .cell { width: 60px; height: 60px; background: #f0f0f0; display: flex; justify-content: center; align-items: center; border: 1px solid #ccc; font-weight: bold; font-size: 18px; }
     .numbered { background: #d9faff; }
     .visited { background: #88ff88; }
@@ -14,7 +14,13 @@
     .invalid { background: #ff6b6b; }
     .solution { background: #cfc; }
     #controls { margin-top: 10px; }
-    canvas { position: absolute; pointer-events: none; z-index: 0; }
+    canvas {
+      position: absolute;
+      pointer-events: none;
+      z-index: 0;
+      top: 0;
+      left: 0;
+    }
   </style>
 </head>
 <body>
@@ -53,6 +59,14 @@
   let visitedSet = new Set();
   let startTime = 0;
   let timerInterval = null;
+
+  function positionCanvas() {
+    const rect = game.getBoundingClientRect();
+    canvas.style.left = `${rect.left + window.scrollX}px`;
+    canvas.style.top = `${rect.top + window.scrollY}px`;
+  }
+  window.addEventListener('resize', positionCanvas);
+  window.addEventListener('scroll', positionCanvas);
 
   function createGrid() {
     game.innerHTML = '';
@@ -109,7 +123,13 @@
       const [r, c] = numberedPoints[i];
       const cell = grid[r][c];
       cell.classList.add('numbered');
-      cell.textContent = (i + 1);
+      if (i === 0) {
+        cell.textContent = '🚑';
+      } else if (i === numberedPoints.length - 1) {
+        cell.textContent = '🏥';
+      } else {
+        cell.textContent = (i + 1);
+      }
     }
   }
 
@@ -161,6 +181,7 @@
     stopTimer();
     timerDisplay.textContent = 'Time: 0.00s';
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    positionCanvas();
   }
 
   function handleCellHover(e) {
