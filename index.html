@@ -1,384 +1,230 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Zip to Hospital - Spaced Path Version</title>
-<style>
-  body {
-    font-family: sans-serif;
-    margin: 10px;
-    user-select: none;
-  }
-  #game {
-    display: grid;
-    grid-template-columns: repeat(6, 60px);
-    grid-template-rows: repeat(6, 60px);
-    gap: 4px;
-    width: max-content;
-    margin-bottom: 10px;
-    position: relative;
-  }
-  .cell {
-    border: 1px solid #ccc;
-    background: #f0f0f0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 22px;
-    cursor: pointer;
-    position: relative;
-  }
-  .cell.empty {
-    background: #eee;
-  }
-  .cell.visited {
-    background: #a0d7a0;
-  }
-  .cell.current {
-    outline: 3px solid #007700;
-  }
-  .icon {
-    position: absolute;
-    font-size: 30px;
-    pointer-events: none;
-    user-select: none;
-    transition: top 0.1s, left 0.1s;
-  }
-  #ambulance {
-    color: red;
-  }
-  #hospital {
-    color: green;
-  }
-  #message {
-    margin-top: 8px;
-    font-weight: bold;
-  }
-  #controls {
-    margin-top: 10px;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zip to Hospital Game</title>
+  <style>
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+    #game { display: grid; grid-template-columns: repeat(6, 60px); grid-template-rows: repeat(6, 60px); gap: 2px; margin-top: 20px; touch-action: none; }
+    .cell { width: 60px; height: 60px; background: #f0f0f0; display: flex; justify-content: center; align-items: center; border: 1px solid #ccc; font-weight: bold; font-size: 18px; }
+    .numbered { background: #d9faff; }
+    .visited { background: #88ff88; }
+    .current { background: #ffe066; }
+    .invalid { background: #ff6b6b; }
+    .solution { background: #cfc; }
+    #controls { margin-top: 10px; }
+    canvas { position: absolute; pointer-events: none; z-index: 0; }
+  </style>
 </head>
 <body>
-
-<h2>Zip to Hospital (Spaced Path Version)</h2>
-<div id="game"></div>
-
-<div id="ambulance" class="icon">🚑</div>
-<div id="hospital" class="icon">🏥</div>
-
-<div id="message">Start at the ambulance (🚑) and trace the path to the hospital (🏥) through all points in order.</div>
-
+<h2>Zip to Hospital</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
-    <option value="8">8 steps</option>
-    <option value="10">10 steps</option>
-    <option value="12">12 steps</option>
+    <option value="8">8 Steps</option>
+    <option value="10">10 Steps</option>
+    <option value="12">12 Steps</option>
   </select>
-  <button id="restartBtn">Restart</button>
-  <div id="timer">Time: 0.00 s</div>
-  <h3>Leaderboard</h3>
-  <ol id="leaderboard"></ol>
+  <button id="restart">Restart</button>
+  <span id="timer">Time: 0.00s</span>
 </div>
+<div id="game"></div>
+<canvas id="traceCanvas" width="360" height="360"></canvas>
+<div id="message"></div>
 
 <script>
 (() => {
-  const size = 6;
-  let pathPoints = []; // array of numbered points e.g. [[r,c],...]
-  let fullTracePath = []; // full traced path including in-between empty cells
-  let visited = new Set(); // string keys "r,c" of visited cells
-  let currentIndex = 0; // index in fullTracePath of next expected cell
-  let dragging = false;
-  let finished = false;
-
   const game = document.getElementById('game');
-  const ambulance = document.getElementById('ambulance');
-  const hospital = document.getElementById('hospital');
-  const message = document.getElementById('message');
-  const difficultySelector = document.getElementById('difficulty');
-  const restartBtn = document.getElementById('restartBtn');
   const timerDisplay = document.getElementById('timer');
-  const leaderboardList = document.getElementById('leaderboard');
+  const restartBtn = document.getElementById('restart');
+  const difficultySelect = document.getElementById('difficulty');
+  const message = document.getElementById('message');
+  const canvas = document.getElementById('traceCanvas');
+  const ctx = canvas.getContext('2d');
 
+  const size = 6;
+  let grid = [];
+  let numberedPoints = [];
+  let solutionPath = [];
+  let currentIndex = 0;
+  let dragging = false;
+  let visitedPath = [];
+  let visitedSet = new Set();
   let startTime = 0;
-  let timerId = null;
+  let timerInterval = null;
 
-  // Create grid cells
-  const grid = [];
   function createGrid() {
     game.innerHTML = '';
-    grid.length = 0;
-    for(let r=0; r<size; r++) {
+    grid = [];
+    for (let r = 0; r < size; r++) {
       const row = [];
-      for(let c=0; c<size; c++) {
-        const div = document.createElement('div');
-        div.classList.add('cell', 'empty');
-        div.dataset.r = r;
-        div.dataset.c = c;
-        game.appendChild(div);
-        row.push(div);
+      for (let c = 0; c < size; c++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.dataset.r = r;
+        cell.dataset.c = c;
+        game.appendChild(cell);
+        row.push(cell);
       }
       grid.push(row);
     }
   }
 
-  // Manhattan distance helper
-  function manhattanDist(a, b) {
-    return Math.abs(a[0]-b[0]) + Math.abs(a[1]-b[1]);
-  }
+  function generateHamiltonianPath() {
+    const visited = Array.from({ length: size }, () => Array(size).fill(false));
+    const path = [];
 
-  // Generate spaced points with minimum gap between consecutive points
-  function generateSpacedPoints(n) {
-    const points = [];
-    const minGap = 2; // min Manhattan gap between consecutive points
-
-    function randomCell() {
-      return [Math.floor(Math.random()*size), Math.floor(Math.random()*size)];
-    }
-
-    let attempts = 0;
-    while(points.length < n && attempts < 1000) {
-      const candidate = randomCell();
-      if(points.some(p => p[0]===candidate[0] && p[1]===candidate[1])) {
-        attempts++;
-        continue; // avoid duplicates
-      }
-      if(points.length === 0) {
-        points.push(candidate);
-      } else {
-        // Check min gap with last point
-        if(manhattanDist(points[points.length-1], candidate) >= minGap) {
-          points.push(candidate);
-        } else {
-          attempts++;
-          continue;
+    function backtrack(r, c) {
+      if (path.length === size * size) return true;
+      const directions = [ [0, 1], [1, 0], [0, -1], [-1, 0] ];
+      for (let [dr, dc] of directions.sort(() => Math.random() - 0.5)) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < size && nc >= 0 && nc < size && !visited[nr][nc]) {
+          visited[nr][nc] = true;
+          path.push([nr, nc]);
+          if (backtrack(nr, nc)) return true;
+          path.pop();
+          visited[nr][nc] = false;
         }
       }
-      attempts++;
+      return false;
     }
-    if(points.length < n) {
-      // fallback: fill with any random points if failed
-      while(points.length < n) {
-        const c = randomCell();
-        if(!points.some(p => p[0]===c[0] && p[1]===c[1])) points.push(c);
-      }
+
+    let startR = Math.floor(Math.random() * size);
+    let startC = Math.floor(Math.random() * size);
+    visited[startR][startC] = true;
+    path.push([startR, startC]);
+    if (backtrack(startR, startC)) return path;
+    return generateHamiltonianPath();
+  }
+
+  function selectNumberedPoints(path, count) {
+    const step = Math.floor(path.length / count);
+    return Array.from({ length: count }, (_, i) => path[i * step]);
+  }
+
+  function renderPoints() {
+    for (let i = 0; i < numberedPoints.length; i++) {
+      const [r, c] = numberedPoints[i];
+      const cell = grid[r][c];
+      cell.classList.add('numbered');
+      cell.textContent = (i + 1);
     }
-    return points;
   }
 
-  // BFS pathfinding for shortest path from start to end on grid ignoring visited except start/end
-  function bfsPath(start, end, blocked= new Set()) {
-    const queue = [[start]];
-    const seen = new Set([start.join(',')]);
-    while(queue.length > 0) {
-      const path = queue.shift();
-      const [r,c] = path[path.length-1];
-      if(r === end[0] && c === end[1]) return path;
-
-      const neighbors = [
-        [r-1,c],[r+1,c],[r,c-1],[r,c+1]
-      ].filter(([nr,nc]) => nr>=0 && nr<size && nc>=0 && nc<size);
-      for(const n of neighbors) {
-        const key = n.join(',');
-        if(seen.has(key)) continue;
-        if(blocked.has(key)) continue;
-        seen.add(key);
-        queue.push(path.concat([n]));
-      }
+  function drawTraceLine() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = 'blue';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let i = 0; i < visitedPath.length; i++) {
+      const [r, c] = visitedPath[i];
+      const x = c * 60 + 30;
+      const y = r * 60 + 30;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
     }
-    return null; // no path found
+    ctx.stroke();
   }
 
-  // Build full tracing path (including empty cells between numbered points)
-  function buildFullTracePath(points) {
-    let fullPath = [];
-    for(let i=0; i<points.length-1; i++) {
-      // block cells that are numbered except current start and end points
-      const blocked = new Set(points.map(p => p.join(',')));
-      blocked.delete(points[i].join(','));
-      blocked.delete(points[i+1].join(','));
-      const segment = bfsPath(points[i], points[i+1], blocked);
-      if(!segment) {
-        // no path found, fail
-        return null;
-      }
-      // Add all except last cell (to avoid duplication) except last segment adds all
-      if(i < points.length-2) {
-        fullPath = fullPath.concat(segment.slice(0, -1));
-      } else {
-        fullPath = fullPath.concat(segment);
-      }
+  function showSolution() {
+    for (let [r, c] of solutionPath) {
+      grid[r][c].classList.add('solution');
     }
-    return fullPath;
   }
 
-  // Render numbers and clear grid classes
-  function renderGrid() {
-    for(let r=0; r<size; r++) {
-      for(let c=0; c<size; c++) {
-        grid[r][c].className = 'cell empty';
-        grid[r][c].textContent = '';
-      }
-    }
-    pathPoints.forEach((p,i) => {
-      const cell = grid[p[0]][p[1]];
-      cell.textContent = i+1;
-      cell.classList.remove('empty');
-      cell.classList.add('number');
-    });
+  function startTimer() {
+    startTime = performance.now();
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      const elapsed = (performance.now() - startTime) / 1000;
+      timerDisplay.textContent = `Time: ${elapsed.toFixed(2)}s`;
+    }, 100);
   }
 
-  // Update ambulance and hospital icon positions
-  function updateIcons() {
-    // ambulance at current traced position, or start if no moves yet
-    let pos;
-    if(currentIndex === 0) pos = pathPoints[0];
-    else pos = fullTracePath[currentIndex-1];
-    positionIcon(ambulance, pos);
-
-    // hospital always at last numbered point
-    positionIcon(hospital, pathPoints[pathPoints.length-1]);
+  function stopTimer() {
+    if (timerInterval) clearInterval(timerInterval);
   }
 
-  // Position an icon over grid cell
-  function positionIcon(icon, [r,c]) {
-    const cell = grid[r][c];
-    const rect = cell.getBoundingClientRect();
-    const gameRect = game.getBoundingClientRect();
-    icon.style.top = (rect.top - gameRect.top + rect.height/2 - icon.offsetHeight/2) + 'px';
-    icon.style.left = (rect.left - gameRect.left + rect.width/2 - icon.offsetWidth/2) + 'px';
-  }
-
-  // Reset visited and UI
-  function resetState() {
-    visited.clear();
+  function resetGame() {
+    createGrid();
+    const n = parseInt(difficultySelect.value);
+    const path = generateHamiltonianPath();
+    solutionPath = [...path];
+    numberedPoints = selectNumberedPoints(path, n);
+    renderPoints();
     currentIndex = 0;
-    finished = false;
-    message.textContent = 'Start at the ambulance (🚑) and trace the path to the hospital (🏥) through all points in order.';
-    timerDisplay.textContent = 'Time: 0.00 s';
-    clearTimer();
-    updateIcons();
-    renderGrid();
-    updateVisitedUI();
+    visitedPath = [];
+    visitedSet.clear();
+    message.textContent = '';
+    stopTimer();
+    timerDisplay.textContent = 'Time: 0.00s';
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 
-  // Mark visited cells in UI
-  function updateVisitedUI() {
-    // Clear all visited classes
-    for(let r=0; r<size; r++) {
-      for(let c=0; c<size; c++) {
-        grid[r][c].classList.remove('visited');
-        grid[r][c].classList.remove('current');
+  function handleCellHover(e) {
+    if (!dragging) return;
+    const cell = e.target;
+    if (!cell.classList.contains('cell')) return;
+    const r = parseInt(cell.dataset.r);
+    const c = parseInt(cell.dataset.c);
+    const key = `${r},${c}`;
+    if (visitedSet.has(key)) return;
+
+    if (visitedPath.length > 0) {
+      const [lr, lc] = visitedPath[visitedPath.length - 1];
+      if (!(Math.abs(r - lr) + Math.abs(c - lc) === 1)) return;
+    }
+
+    visitedPath.push([r, c]);
+    visitedSet.add(key);
+    cell.classList.add('visited');
+    drawTraceLine();
+
+    const [targetR, targetC] = numberedPoints[currentIndex];
+    if (r === targetR && c === targetC) {
+      currentIndex++;
+      cell.classList.add('current');
+      if (currentIndex === numberedPoints.length && visitedPath.length === size * size) {
+        message.textContent = `🎉 Success! Time: ${((performance.now() - startTime) / 1000).toFixed(2)}s`;
+        stopTimer();
+        dragging = false;
       }
+    } else if (grid[r][c].textContent !== '') {
+      cell.classList.add('invalid');
+      message.textContent = `❌ Wrong number order!`;
+      dragging = false;
+      stopTimer();
+      showSolution();
     }
-    // Mark visited
-    for(let cellStr of visited) {
-      const [r,c] = cellStr.split(',').map(Number);
-      grid[r][c].classList.add('visited');
-    }
-    // Current cell highlight
-    if(currentIndex > 0) {
-      const [r,c] = fullTracePath[currentIndex-1];
-grid[r][c].classList.add('current');
-}
-}
-
-// Start timer
-function startTimer() {
-startTime = performance.now();
-timerId = setInterval(() => {
-const elapsed = (performance.now() - startTime) / 1000;
-timerDisplay.textContent = Time: ${elapsed.toFixed(2)} s;
-}, 100);
-}
-
-function clearTimer() {
-if(timerId) clearInterval(timerId);
-timerId = null;
-}
-
-function saveToLeaderboard(seconds) {
-const key = zip_leaderboard_${difficultySelector.value};
-const scores = JSON.parse(localStorage.getItem(key) || "[]");
-scores.push(seconds);
-scores.sort((a,b)=>a-b);
-if(scores.length > 10) scores.length = 10;
-localStorage.setItem(key, JSON.stringify(scores));
-}
-
-function renderLeaderboard() {
-const key = zip_leaderboard_${difficultySelector.value};
-const scores = JSON.parse(localStorage.getItem(key) || "[]");
-leaderboardList.innerHTML = '';
-for(let score of scores) {
-const li = document.createElement('li');
-li.textContent = ${score.toFixed(2)} s;
-leaderboardList.appendChild(li);
-}
-}
-
-function setupGame() {
-const n = parseInt(difficultySelector.value);
-createGrid();
-pathPoints = generateSpacedPoints(n);
-fullTracePath = buildFullTracePath(pathPoints);
-if(!fullTracePath) {
-setupGame(); // retry
-return;
-}
-renderGrid();
-resetState();
-updateIcons();
-renderLeaderboard();
-}
-
-// Handle drag tracing
-game.addEventListener('mousedown', e => {
-if(finished) return;
-dragging = true;
-if(timerId === null) startTimer();
-});
-game.addEventListener('mouseup', e => {
-dragging = false;
-});
-game.addEventListener('mouseleave', e => {
-dragging = false;
-});
-game.addEventListener('mousemove', e => {
-if(!dragging || finished) return;
-const target = e.target;
-if(!target.classList.contains('cell')) return;
-const r = parseInt(target.dataset.r);
-const c = parseInt(target.dataset.c);
-const key = ${r},${c};
-
-if(currentIndex >= fullTracePath.length) return;
-
-const [er,ec] = fullTracePath[currentIndex];
-if(r===er && c===ec && !visited.has(key)) {
-  visited.add(key);
-  currentIndex++;
-  updateVisitedUI();
-  updateIcons();
-
-  if(currentIndex === fullTracePath.length) {
-    finished = true;
-    clearTimer();
-    const time = (performance.now() - startTime)/1000;
-    message.textContent = `🎉 Success! Time: ${time.toFixed(2)} s`;
-    saveToLeaderboard(time);
-    renderLeaderboard();
   }
-}
-});
 
-restartBtn.onclick = setupGame;
-difficultySelector.onchange = setupGame;
+  game.addEventListener('mousedown', (e) => {
+    if (e.target.classList.contains('cell')) {
+      visitedPath = [];
+      visitedSet.clear();
+      for (let row of grid) {
+        for (let cell of row) {
+          cell.classList.remove('visited', 'invalid', 'current', 'solution');
+        }
+      }
+      currentIndex = 0;
+      dragging = true;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      startTimer();
+    }
+  });
 
-setupGame();
+  game.addEventListener('mouseup', () => dragging = false);
+  game.addEventListener('mouseleave', () => dragging = false);
+  game.addEventListener('mousemove', handleCellHover);
+
+  restartBtn.onclick = resetGame;
+  difficultySelect.onchange = resetGame;
+
+  resetGame();
 })();
 </script>
-
-</body> </html>
+</body>
+</html>
