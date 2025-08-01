@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Zip to Hospital v3</h2>
+<h2>Zip to Hospital v4</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -239,17 +239,7 @@ function handleCellEnter(r, c) {
   if (last && !isAdjacent(last[0], last[1], r, c)) return; // only adjacent moves allowed
   visitedPath.push([r, c]);
   visitedSet.add(key);
-  if (last){
-    isNaN(grid[last[0]][last[1]].textContent)
-    {
-     grid[last[0]][last[1]].textContent = 'X';
-    }
-  }
-//  grid[r][c].classList.add('visited');
-  isNaN(grid[r][c].textContent)
-   {  
-     grid[r][c].textContent = '🚑';
-   }
+  grid[r][c].classList.add('visited');
 
   // Check if this cell is a numbered point
   const thisIndex = numberedPoints.findIndex(([nr, nc]) => nr === r && nc === c);
@@ -257,7 +247,6 @@ function handleCellEnter(r, c) {
   if (thisIndex !== -1) {
     if (thisIndex === currentIndex) {
       currentIndex++;
-      grid[r][c].textContent = currentIndex && ' 🚑';
       if (currentIndex === 1) startTimer();
       if (currentIndex === numberedPoints.length) {
         stopTimer();
@@ -268,6 +257,17 @@ function handleCellEnter(r, c) {
       message.textContent = '❌ Wrong number order!';
       grid[r][c].classList.add('invalid');
     }
+  } else {
+    isNaN(grid[r][c].textContent)
+    {  
+     grid[r][c].textContent = '🚑';
+    }
+   if (last){
+    isNaN(grid[last[0]][last[1]].textContent)
+    {
+     grid[last[0]][last[1]].textContent = 'X';
+    }
+   }
   }
 }
 
