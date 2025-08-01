@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Zip to Hospital v4</h2>
+<h2>Zip to Hospital v5</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -266,7 +266,9 @@ function handleCellEnter(r, c) {
     isNaN(grid[last[0]][last[1]].textContent)
     {
      grid[last[0]][last[1]].textContent = 'X';
-    }
+    } else {
+     grid[last[0]][last[1]].textContent = currentIndex;
+   }
    }
   }
 }
