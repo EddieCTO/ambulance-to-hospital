@@ -240,8 +240,9 @@ function handleCellEnter(r, c) {
 
   visitedPath.push([r, c]);
   visitedSet.add(key);
+  cell.textContent = '🚑';
   grid[r][c].classList.add('visited');
-
+  
   // Check if this cell is a numbered point
   const thisIndex = numberedPoints.findIndex(([nr, nc]) => nr === r && nc === c);
 
