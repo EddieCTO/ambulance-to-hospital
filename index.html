@@ -232,6 +232,7 @@
   }
 
 function handleCellEnter(r, c) {
+  var cell=last[0];
   if (hintAnimating) return;
   const key = `${r},${c}`;
   const last = visitedPath.length ? visitedPath[visitedPath.length - 1] : null;
@@ -240,6 +241,7 @@ function handleCellEnter(r, c) {
 
   visitedPath.push([r, c]);
   visitedSet.add(key);
+  cell.textContent = '';
   grid[r][c].textContent = '🚑';
   grid[r][c].classList.add('visited');
   
