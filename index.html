@@ -232,16 +232,14 @@
   }
 
 function handleCellEnter(r, c) {
-  var cell=last[0];
   if (hintAnimating) return;
   const key = `${r},${c}`;
   const last = visitedPath.length ? visitedPath[visitedPath.length - 1] : null;
   if (visitedSet.has(key)) return; // no revisiting cells
   if (last && !isAdjacent(last[0], last[1], r, c)) return; // only adjacent moves allowed
-
   visitedPath.push([r, c]);
   visitedSet.add(key);
-  cell.textContent = '';
+  grid[last[0]][last[1]].textContent = '';
   grid[r][c].textContent = '🚑';
   grid[r][c].classList.add('visited');
   
