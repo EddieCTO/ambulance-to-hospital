@@ -231,34 +231,36 @@
     return (Math.abs(r1 - r2) + Math.abs(c1 - c2)) === 1;
   }
 
-  function handleCellEnter(r, c) {
-    if (hintAnimating) return;
-    const key = `${r},${c}`;
-    const last = visitedPath.length ? visitedPath[visitedPath.length - 1] : null;
-    if (visitedSet.has(key)) return; // no revisiting cells
-    if (last && !isAdjacent(last[0], last[1], r, c)) return; // only adjacent moves allowed
+function handleCellEnter(r, c) {
+  if (hintAnimating) return;
+  const key = `${r},${c}`;
+  const last = visitedPath.length ? visitedPath[visitedPath.length - 1] : null;
+  if (visitedSet.has(key)) return; // no revisiting cells
+  if (last && !isAdjacent(last[0], last[1], r, c)) return; // only adjacent moves allowed
 
-    visitedPath.push([r, c]);
-    visitedSet.add(key);
-    grid[r][c].classList.add('visited');
+  visitedPath.push([r, c]);
+  visitedSet.add(key);
+  grid[r][c].classList.add('visited');
 
-    // Check if on correct numbered point in order
-    if (currentIndex < numberedPoints.length) {
-      const [nr, nc] = numberedPoints[currentIndex];
-      if (r === nr && c === nc) {
-        currentIndex++;
-        if (currentIndex === 1) startTimer();
-        if (currentIndex === numberedPoints.length) {
-          stopTimer();
-          message.textContent = "🎉 You reached the hospital! Well done!";
-        }
-      } else {
-        // If visiting an incorrect numbered point or skipping order
-        message.textContent = 'Wrong order or invalid path!';
-        grid[r][c].classList.add('invalid');
+  // Check if this cell is a numbered point
+  const thisIndex = numberedPoints.findIndex(([nr, nc]) => nr === r && nc === c);
+
+  if (thisIndex !== -1) {
+    if (thisIndex === currentIndex) {
+      currentIndex++;
+      if (currentIndex === 1) startTimer();
+      if (currentIndex === numberedPoints.length) {
+        stopTimer();
+        message.textContent = "🎉 You reached the hospital! Well done!";
       }
+    } else {
+      // If touching a future (or past) point out of order
+      message.textContent = '❌ Wrong number order!';
+      grid[r][c].classList.add('invalid');
     }
   }
+}
+
 
   // Mouse and touch event handlers
   function onPointerDown(e) {
