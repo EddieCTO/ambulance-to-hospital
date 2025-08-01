@@ -21,47 +21,6 @@
       top: 0;
       left: 0;
     }
-	.trace-up::before,
-.trace-down::before,
-.trace-left::before,
-.trace-right::before {
-  content: '';
-  position: absolute;
-  background-color: #00ccff;
-}
-
-.trace-up::before {
-  top: 0;
-  left: 50%;
-  width: 4px;
-  height: 50%;
-  transform: translateX(-50%);
-}
-
-.trace-down::before {
-  bottom: 0;
-  left: 50%;
-  width: 4px;
-  height: 50%;
-  transform: translateX(-50%);
-}
-
-.trace-left::before {
-  left: 0;
-  top: 50%;
-  width: 50%;
-  height: 4px;
-  transform: translateY(-50%);
-}
-
-.trace-right::before {
-  right: 0;
-  top: 50%;
-  width: 50%;
-  height: 4px;
-  transform: translateY(-50%);
-}
-
   </style>
 </head>
 <body>
@@ -276,41 +235,16 @@ function handleCellEnter(r, c) {
   if (hintAnimating) return;
   const key = `${r},${c}`;
   const last = visitedPath.length ? visitedPath[visitedPath.length - 1] : null;
-
-  // Must follow solution path in order
-  const expectedStep = solutionPath[visitedPath.length];
-  if (!expectedStep || r !== expectedStep[0] || c !== expectedStep[1]) {
-    message.textContent = '❌ Wrong move – not following path!';
-    grid[r][c].classList.add('invalid');
-    return;
-  }
+  if (visitedSet.has(key)) return; // no revisiting cells
+  if (last && !isAdjacent(last[0], last[1], r, c)) return; // only adjacent moves allowed
 
   visitedPath.push([r, c]);
   visitedSet.add(key);
+  grid[r][c].classList.add('visited');
 
-  // Draw directional trace
-  if (last) {
-    const [pr, pc] = last;
-    const dr = r - pr;
-    const dc = c - pc;
-
-    if (dr === 1) {
-      grid[pr][pc].classList.add('trace-down');
-      grid[r][c].classList.add('trace-up');
-    } else if (dr === -1) {
-      grid[pr][pc].classList.add('trace-up');
-      grid[r][c].classList.add('trace-down');
-    } else if (dc === 1) {
-      grid[pr][pc].classList.add('trace-right');
-      grid[r][c].classList.add('trace-left');
-    } else if (dc === -1) {
-      grid[pr][pc].classList.add('trace-left');
-      grid[r][c].classList.add('trace-right');
-    }
-  }
-
-  // Check if this is a numbered checkpoint
+  // Check if this cell is a numbered point
   const thisIndex = numberedPoints.findIndex(([nr, nc]) => nr === r && nc === c);
+
   if (thisIndex !== -1) {
     if (thisIndex === currentIndex) {
       currentIndex++;
@@ -320,17 +254,13 @@ function handleCellEnter(r, c) {
         message.textContent = "🎉 You reached the hospital! Well done!";
       }
     } else {
-      message.textContent = '❌ Wrong checkpoint order!';
+      // If touching a future (or past) point out of order
+      message.textContent = '❌ Wrong number order!';
       grid[r][c].classList.add('invalid');
     }
   }
-
-  if (visitedPath.length === solutionPath.length && currentIndex < numberedPoints.length) {
-    stopTimer();
-    message.textContent = '❌ You missed some numbered points!';
-    showHint();
-  }
 }
+
 
   // Mouse and touch event handlers
   function onPointerDown(e) {
