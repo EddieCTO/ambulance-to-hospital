@@ -242,12 +242,13 @@ function handleCellEnter(r, c) {
   if (last){
     isNaN(grid[last[0]][last[1]].textContent)
     {
-     grid[last[0]][last[1]].textContent = '';}
+     grid[last[0]][last[1]].textContent = '';
     }
+  }
   isNaN(grid[r][c].textContent)
-    {  
-      grid[r][c].textContent = '🚑';
-    }
+   {  
+     grid[r][c].textContent = '🚑';
+   }
   grid[r][c].classList.add('visited');
   
   // Check if this cell is a numbered point
