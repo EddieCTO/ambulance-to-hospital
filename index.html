@@ -239,8 +239,15 @@ function handleCellEnter(r, c) {
   if (last && !isAdjacent(last[0], last[1], r, c)) return; // only adjacent moves allowed
   visitedPath.push([r, c]);
   visitedSet.add(key);
-  if (last){grid[last[0]][last[1]].textContent = '';}
-  grid[r][c].textContent = '🚑';
+  if (last){
+    isNaN(grid[last[0]][last[1]].textContent)
+    {
+     grid[last[0]][last[1]].textContent = '';}
+    }
+  isNaN(grid[r][c].textContent)
+    {  
+      grid[r][c].textContent = '🚑';
+    }
   grid[r][c].classList.add('visited');
   
   // Check if this cell is a numbered point
@@ -248,8 +255,8 @@ function handleCellEnter(r, c) {
 
   if (thisIndex !== -1) {
     if (thisIndex === currentIndex) {
-      grid[r][c].textContent = thisIndex;
       currentIndex++;
+      grid[r][c].textContent = thisIndex;
       if (currentIndex === 1) startTimer();
       if (currentIndex === numberedPoints.length) {
         stopTimer();
