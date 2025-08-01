@@ -248,6 +248,7 @@ function handleCellEnter(r, c) {
 
   if (thisIndex !== -1) {
     if (thisIndex === currentIndex) {
+      grid[r][c].textContent = thisIndex;
       currentIndex++;
       if (currentIndex === 1) startTimer();
       if (currentIndex === numberedPoints.length) {
