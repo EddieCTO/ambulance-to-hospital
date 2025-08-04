@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Ambulance to Hospital v22</h2>
+<h2>Ambulance to Hospital v23</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -221,6 +221,13 @@
   function resetGame() {
     if (hintAnimating) return; // Prevent reset while hint animates
     createGrid();
+    for (let i = 0; i < gridSize; i++) {
+    for (let j = 0; j < gridSize; j++) {
+      const key = `${i},${j}`;
+      if (!visitedSet.has(key)) {
+        grid[i][j].style.border = '1px solid #ccc'; 
+    }
+  }
     const n = parseInt(difficultySelect.value);
     const path = generateHamiltonianPath();
     solutionPath = [...path];
@@ -288,12 +295,21 @@ if (thisIndex === currentIndex) {
   if (currentIndex === numberedPoints.length) {
     // All numbered points visited — check if ALL grid cells were visited too
     const totalCells = gridSize * gridSize;
-    if (visitedSet.size === totalCells) {
-      stopTimer();
-      message.textContent = "🎉 Perfect! You visited every cell and reached the hospital!";
-    } else {
-      message.textContent = "❌ You reached the hospital but didn't visit all cells!";
-      grid[r][c].classList.add('invalid');
+   
+if (visitedSet.size === totalCells) {
+  stopTimer();
+  message.textContent = "🎉 Perfect! You visited every cell and reached the hospital!";
+} else {
+  message.textContent = "❌ You reached the hospital but didn't visit all cells!";
+  grid[r][c].classList.add('invalid');
+
+  // 🔴 Highlight unvisited cells
+  for (let i = 0; i < gridSize; i++) {
+    for (let j = 0; j < gridSize; j++) {
+      const key = `${i},${j}`;
+      if (!visitedSet.has(key)) {
+        grid[i][j].style.border = '2px solid red';
+      }
     }
   }
 }
@@ -382,6 +398,7 @@ if (thisIndex === currentIndex) {
 </script>
 </body>
 </html>
+
 
 
 
