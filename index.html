@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Zip to Hospital v13</h2>
+<h2>Zip to Hospital v14</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -251,6 +251,7 @@ function handleCellEnter(r, c) {
   visitedPath.push([r, c]);
   visitedSet.add(key);
   //grid[r][c].classList.add('visited');
+  grid[r][c].textContent = '🚑';	
 
       if (last) {
         const [x1, y1] = [last[1]*60 + 30, last[0]*60 + 30];
@@ -373,6 +374,7 @@ function handleCellEnter(r, c) {
 </script>
 </body>
 </html>
+
 
 
 
