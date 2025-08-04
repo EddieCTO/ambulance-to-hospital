@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Ambulance to Hospital v21</h2>
+<h2>Ambulance to Hospital v22</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -282,14 +282,22 @@ function handleCellEnter(r, c) {
   // Check number sequence
   const thisIndex = numberedPoints.findIndex(([nr, nc]) => nr === r && nc === c);
   if (thisIndex !== -1) {
-    if (thisIndex === currentIndex) {
-      currentIndex++;
-      if (currentIndex === 1) startTimer();
-      if (currentIndex === numberedPoints.length) {
-        stopTimer();
-        message.textContent = "🎉 You reached the hospital! Well done!";
-      }
+if (thisIndex === currentIndex) {
+  currentIndex++;
+  if (currentIndex === 1) startTimer();
+  if (currentIndex === numberedPoints.length) {
+    // All numbered points visited — check if ALL grid cells were visited too
+    const totalCells = gridSize * gridSize;
+    if (visitedSet.size === totalCells) {
+      stopTimer();
+      message.textContent = "🎉 Perfect! You visited every cell and reached the hospital!";
     } else {
+      message.textContent = "❌ You reached the hospital but didn't visit all cells!";
+      grid[r][c].classList.add('invalid');
+    }
+  }
+}
+ else {
       message.textContent = '❌ Wrong number order!';
       grid[r][c].classList.add('invalid');
     }
@@ -374,6 +382,7 @@ function handleCellEnter(r, c) {
 </script>
 </body>
 </html>
+
 
 
 
