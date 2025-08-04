@@ -264,6 +264,7 @@ function handleCellEnter(r, c) {
      grid[r][c].textContent = '🚑';
     }
    if (last){
+    console.log (grid[last[0]][last[1]].getAttribute("data-num")); 
     if(isNaN(grid[last[0]][last[1]].getAttribute("data-num")))
     {
      grid[last[0]][last[1]].textContent = 'X';
@@ -352,5 +353,6 @@ function handleCellEnter(r, c) {
 </script>
 </body>
 </html>
+
 
 
