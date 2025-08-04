@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Ambulance to Hospital v31</h2>
+<h2>Ambulance to Hospital v32</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -279,51 +279,24 @@ function handleCellEnter(r, c) {
     ctx.stroke();
   }
 
-  // Clear any previous invalid styling
-  grid[r][c].classList.remove('invalid');
-
-  // Check if this is a numbered point
-const thisIndex = numberedPoints.findIndex(([nr, nc]) => nr === r && nc === c);
-
-if (thisIndex !== -1) {
-  if (thisIndex === currentIndex) {
-    // Check if this is the final point (hospital) BEFORE incrementing
-    const isLastPoint = currentIndex === numberedPoints.length - 1;
-
-    currentIndex++;
-    if (currentIndex === 1) startTimer();
-
-    if (isLastPoint) {
-      const totalCells = gridSize * gridSize;
-
-      if (visitedSet.size === totalCells) {
+  // Check number sequence
+  const thisIndex = numberedPoints.findIndex(([nr, nc]) => nr === r && nc === c);
+  if (thisIndex !== -1) {
+    if (thisIndex === currentIndex) {
+      currentIndex++;
+      if (currentIndex === 1) startTimer();
+      if (currentIndex === numberedPoints.length) {
         stopTimer();
-        message.textContent = "🎉 Perfect! You visited every cell and reached the hospital!";
-      } else {
+        message.textContent = "🎉 You reached the hospital! Well done!";
+      }else{
         stopTimer();
         message.textContent = "❌ You reached the hospital but didn't visit all cells!";
-
-        // Highlight unvisited cells
-        for (let i = 0; i < gridSize; i++) {
-          for (let j = 0; j < gridSize; j++) {
-            const key = `${i},${j}`;
-            if (!visitedSet.has(key)) {
-              grid[i][j].style.border = '2px solid red';
-            }
-          }
-        }
-      }
+    }} else {
+      message.textContent = '❌ Wrong number order!';
+      grid[r][c].classList.add('invalid');
     }
-  } else {
-    // Wrong numbered point (out of sequence)
-    message.textContent = '❌ Wrong number order!';
-    grid[r][c].classList.add('invalid');
   }
 }
-
-}
-
-
 
   // Mouse and touch event handlers
   function onPointerDown(e) {
@@ -401,6 +374,7 @@ if (thisIndex !== -1) {
 </script>
 </body>
 </html>
+
 
 
 
