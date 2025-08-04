@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Ambulance to Hospital v26</h2>
+<h2>Ambulance to Hospital v27</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -228,6 +228,7 @@
         grid[i][j].style.border = '1px solid #ccc'; 
     }
   }
+    }
     const n = parseInt(difficultySelect.value);
     const path = generateHamiltonianPath();
     solutionPath = [...path];
@@ -398,6 +399,7 @@ if (visitedSet.size === totalCells) {
 </script>
 </body>
 </html>
+
 
 
 
