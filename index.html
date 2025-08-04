@@ -244,15 +244,13 @@
 function handleCellEnter(r, c) {
   if (hintAnimating) return;
   const key = `${r},${c}`;
+  grid[r][c].textContent = '🚑';
   const last = visitedPath.length ? visitedPath[visitedPath.length - 1] : null;
   
   if (visitedSet.has(key)) return; // no revisiting cells
   if (last && !isAdjacent(last[0], last[1], r, c)) return; // only adjacent moves allowed
   visitedPath.push([r, c]);
   visitedSet.add(key);
-  //grid[r][c].classList.add('visited');
-  grid[r][c].textContent = '🚑';	
-
       if (last) {
         const [x1, y1] = [last[1]*60 + 30, last[0]*60 + 30];
         const [x2, y2] = [c*60 + 30, r*60 + 30];
@@ -279,21 +277,6 @@ function handleCellEnter(r, c) {
       message.textContent = '❌ Wrong number order!';
       grid[r][c].classList.add('invalid');
     }
-  } else {
-    if(isNaN(grid[r][c].textContent))
-    {  
-     grid[r][c].textContent = '🚑';
-    }
-   if (last){
-
-    if(null==(grid[last[0]][last[1]].getAttribute("data-num")))
-    {
-     grid[last[0]][last[1]].textContent = 'X';
-    }
-     else { 
-           grid[last[0]][last[1]].textContent = grid[last[0]][last[1]].getAttribute("data-num");
-          }
-   }
   }
 }
 
@@ -374,6 +357,7 @@ function handleCellEnter(r, c) {
 </script>
 </body>
 </html>
+
 
 
 
