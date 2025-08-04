@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Ambulance to Hospital v20</h2>
+<h2>Ambulance to Hospital v21</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -243,39 +243,43 @@
 
 function handleCellEnter(r, c) {
   if (hintAnimating) return;
+
   const key = `${r},${c}`;
-  grid[r][c].textContent = '🚑';
   const last = visitedPath.length ? visitedPath[visitedPath.length - 1] : null;
-  if (visitedSet.has(key)) {
-   if (last){
-    if(null==(grid[last[0]][last[1]].getAttribute("data-num")))
-    {
-     grid[last[0]][last[1]].textContent = '';
-    }}
-   return;
-   } // no revisiting cells
-  if (last && !isAdjacent(last[0], last[1], r, c)){
-   if (last){
-    if(null==(grid[last[0]][last[1]].getAttribute("data-num")))
-    {
-     grid[last[0]][last[1]].textContent = '';
-    }}
-  return;
-  }// only adjacent moves allowed
+
+  // Don't revisit
+  if (visitedSet.has(key)) return;
+
+  // Only allow orthogonal adjacent moves
+  if (last && !isAdjacent(last[0], last[1], r, c)) return;
+
   visitedPath.push([r, c]);
   visitedSet.add(key);
-      if (last) {
-        const [x1, y1] = [last[1]*60 + 30, last[0]*60 + 30];
-        const [x2, y2] = [c*60 + 30, r*60 + 30];
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.strokeStyle = '#00ccff';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-      }
-	  
-  // Check if this cell is a numbered point
+
+  // Restore previous cell
+  if (last) {
+    const [lr, lc] = last;
+    const prevCell = grid[lr][lc];
+    const dataNum = prevCell.getAttribute("data-num");
+    prevCell.textContent = dataNum !== null ? dataNum : '';
+  }
+
+  // Update current cell to show ambulance
+  grid[r][c].textContent = '🚑';
+
+  // Draw path segment on canvas
+  if (last) {
+    const [x1, y1] = [last[1] * 60 + 30, last[0] * 60 + 30];
+    const [x2, y2] = [c * 60 + 30, r * 60 + 30];
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = '#00ccff';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  }
+
+  // Check number sequence
   const thisIndex = numberedPoints.findIndex(([nr, nc]) => nr === r && nc === c);
   if (thisIndex !== -1) {
     if (thisIndex === currentIndex) {
@@ -286,29 +290,12 @@ function handleCellEnter(r, c) {
         message.textContent = "🎉 You reached the hospital! Well done!";
       }
     } else {
-      // If touching a future (or past) point out of order
       message.textContent = '❌ Wrong number order!';
       grid[r][c].classList.add('invalid');
     }
-   if (last){
-    if(null==(grid[last[0]][last[1]].getAttribute("data-num")))
-    {
-     grid[last[0]][last[1]].textContent = '';
-    }
-   }
-  }else {
-   if (last){
-	   
-    if(null==(grid[last[0]][last[1]].getAttribute("data-num")))
-    {
-     grid[last[0]][last[1]].textContent = '';
-    }
-     else { 
-           grid[last[0]][last[1]].textContent = grid[last[0]][last[1]].getAttribute("data-num");
-          }
-   }
   }
 }
+
 
 
   // Mouse and touch event handlers
@@ -387,6 +374,7 @@ function handleCellEnter(r, c) {
 </script>
 </body>
 </html>
+
 
 
 
