@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Ambulance to Hospital v34</h2>
+<h2>Ambulance to Hospital v35</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -289,14 +289,14 @@ function handleCellEnter(r, c) {
 
       if (isLastPoint) {
         stopTimer();
-        const totalCells = gridSize * gridSize;
+        const totalCells = size * size;
         if (visitedSet.size === totalCells) {
           message.textContent = "🎉 Perfect! You visited every cell and reached the hospital!";
         } else {
           message.textContent = "❌ You reached the hospital but didn't visit all cells!";
           // Optional: Highlight unvisited cells
-          for (let i = 0; i < gridSize; i++) {
-            for (let j = 0; j < gridSize; j++) {
+          for (let i = 0; i < size; i++) {
+            for (let j = 0; j < size; j++) {
               const key = `${i},${j}`;
               if (!visitedSet.has(key)) {
                 grid[i][j].style.border = '2px solid red';
@@ -388,6 +388,7 @@ function handleCellEnter(r, c) {
 </script>
 </body>
 </html>
+
 
 
 
