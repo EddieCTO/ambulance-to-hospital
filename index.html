@@ -65,7 +65,7 @@
   </style>
 </head>
 <body>
-<h2>Zip to Hospital v11</h2>
+<h2>Zip to Hospital v12</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -278,16 +278,11 @@ function handleCellEnter(r, c) {
   const key = `${r},${c}`;
   const last = visitedPath.length ? visitedPath[visitedPath.length - 1] : null;
 
-  // Must follow solution path in order
-  const expectedStep = solutionPath[visitedPath.length];
-  if (!expectedStep || r !== expectedStep[0] || c !== expectedStep[1]) {
-    message.textContent = '❌ Wrong move – not following path!';
-    grid[r][c].classList.add('invalid');
-    return;
-  }
-
+  if (visitedSet.has(key)) return; // no revisiting cells
+  if (last && !isAdjacent(last[0], last[1], r, c)) return; // only adjacent moves allowed
   visitedPath.push([r, c]);
   visitedSet.add(key);
+  grid[r][c].classList.add('visited');
 
   // Draw directional trace
   if (last) {
@@ -321,6 +316,7 @@ function handleCellEnter(r, c) {
         message.textContent = "🎉 You reached the hospital! Well done!";
       }
     } else {
+       // If touching a future (or past) point out of order
       message.textContent = '❌ Wrong checkpoint order!';
       grid[r][c].classList.add('invalid');
     }
@@ -332,8 +328,6 @@ function handleCellEnter(r, c) {
     showHint();
   }
 }
-
-
 
   // Mouse and touch event handlers
   function onPointerDown(e) {
@@ -411,6 +405,7 @@ function handleCellEnter(r, c) {
 </script>
 </body>
 </html>
+
 
 
 
