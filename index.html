@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Ambulance to Hospital v35</h2>
+<h2>Ambulance to Hospital v36</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -299,7 +299,7 @@ function handleCellEnter(r, c) {
             for (let j = 0; j < size; j++) {
               const key = `${i},${j}`;
               if (!visitedSet.has(key)) {
-                grid[i][j].style.border = '2px solid red';
+                grid[i][j].classList.add('invalid');
               }
             }
           }
@@ -388,6 +388,7 @@ function handleCellEnter(r, c) {
 </script>
 </body>
 </html>
+
 
 
 
