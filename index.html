@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Ambulance to Hospital v28</h2>
+<h2>Ambulance to Hospital v29</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -279,40 +279,46 @@ function handleCellEnter(r, c) {
     ctx.stroke();
   }
 
-  // Check number sequence
-  const thisIndex = numberedPoints.findIndex(([nr, nc]) => nr === r && nc === c);
-  if (thisIndex !== -1) {
-if (thisIndex === currentIndex) {
-  currentIndex++;
-  if (currentIndex === 1) startTimer();
-  if (currentIndex === numberedPoints.length) {
-    // All numbered points visited — check if ALL grid cells were visited too
-    const totalCells = gridSize * gridSize;
-   
-if (visitedSet.size === totalCells) {
-  stopTimer();
-  message.textContent = "🎉 Perfect! You visited every cell and reached the hospital!";
-} else {
-  message.textContent = "❌ You reached the hospital but didn't visit all cells!";
-  grid[r][c].classList.add('invalid');
+  // Clear any previous invalid styling
+  grid[r][c].classList.remove('invalid');
 
-  // 🔴 Highlight unvisited cells
-  for (let i = 0; i < gridSize; i++) {
-    for (let j = 0; j < gridSize; j++) {
-      const key = `${i},${j}`;
-      if (!visitedSet.has(key)) {
-        grid[i][j].style.border = '2px solid red';
+  // Check if this is a numbered point
+  const thisIndex = numberedPoints.findIndex(([nr, nc]) => nr === r && nc === c);
+
+  if (thisIndex !== -1) {
+    if (thisIndex === currentIndex) {
+      currentIndex++;
+      if (currentIndex === 1) startTimer();
+
+      // If we reached the final numbered point (hospital)
+      if (currentIndex === numberedPoints.length) {
+        const totalCells = gridSize * gridSize;
+
+        if (visitedSet.size === totalCells) {
+          stopTimer();
+          message.textContent = "🎉 Perfect! You visited every cell and reached the hospital!";
+        } else {
+          stopTimer();
+          message.textContent = "❌ You reached the hospital but didn't visit all cells!";
+          // Highlight unvisited cells
+          for (let i = 0; i < gridSize; i++) {
+            for (let j = 0; j < gridSize; j++) {
+              const key = `${i},${j}`;
+              if (!visitedSet.has(key)) {
+                grid[i][j].style.border = '2px solid red';
+              }
+            }
+          }
+        }
       }
-    }
-  }
-}
-} else {
+    } else {
+      // Wrong numbered point (out of sequence)
       message.textContent = '❌ Wrong number order!';
       grid[r][c].classList.add('invalid');
     }
   }
 }
-}
+
 
 
   // Mouse and touch event handlers
@@ -391,6 +397,7 @@ if (visitedSet.size === totalCells) {
 </script>
 </body>
 </html>
+
 
 
 
