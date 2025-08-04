@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Ambulance to Hospital v32</h2>
+<h2>Ambulance to Hospital v33</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -283,20 +283,34 @@ function handleCellEnter(r, c) {
   const thisIndex = numberedPoints.findIndex(([nr, nc]) => nr === r && nc === c);
   if (thisIndex !== -1) {
     if (thisIndex === currentIndex) {
+      const isLastPoint = currentIndex === numberedPoints.length - 1;
       currentIndex++;
       if (currentIndex === 1) startTimer();
-      if (currentIndex === numberedPoints.length) {
+
+      if (isLastPoint) {
         stopTimer();
-        message.textContent = "🎉 You reached the hospital! Well done!";
-      }else{
-        stopTimer();
-        message.textContent = "❌ You reached the hospital but didn't visit all cells!";
-    }} else {
+        const totalCells = gridSize * gridSize;
+        if (visitedSet.size === totalCells) {
+          message.textContent = "🎉 Perfect! You visited every cell and reached the hospital!";
+        } else {
+          message.textContent = "❌ You reached the hospital but didn't visit all cells!";
+          // Optional: Highlight unvisited cells
+          for (let i = 0; i < gridSize; i++) {
+            for (let j = 0; j < gridSize; j++) {
+              const key = `${i},${j}`;
+              if (!visitedSet.has(key)) {
+                grid[i][j].style.border = '2px solid red';
+              }
+            }
+          }
+        }
+      }
+    } else {
       message.textContent = '❌ Wrong number order!';
       grid[r][c].classList.add('invalid');
     }
   }
-}
+
 
   // Mouse and touch event handlers
   function onPointerDown(e) {
@@ -374,6 +388,7 @@ function handleCellEnter(r, c) {
 </script>
 </body>
 </html>
+
 
 
 
