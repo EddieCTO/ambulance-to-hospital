@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Ambulance to Hospital v17</h2>
+<h2>Ambulance to Hospital v18</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -277,10 +277,12 @@ function handleCellEnter(r, c) {
       message.textContent = '❌ Wrong number order!';
       grid[r][c].classList.add('invalid');
     }
-   if(null==(grid[last[0]][last[1]].getAttribute("data-num")))
+   if (last){
+    if(null==(grid[last[0]][last[1]].getAttribute("data-num")))
     {
      grid[last[0]][last[1]].textContent = '';
     }
+   }
   }else {
    if (last){
 	   
@@ -372,6 +374,7 @@ function handleCellEnter(r, c) {
 </script>
 </body>
 </html>
+
 
 
 
