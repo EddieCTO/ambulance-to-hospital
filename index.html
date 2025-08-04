@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Zip to Hospital v9</h2>
+<h2>Zip to Hospital v10</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -259,7 +259,7 @@ function handleCellEnter(r, c) {
       grid[r][c].classList.add('invalid');
     }
   } else {
-    isNaN(grid[r][c].textContent)
+    if(isNaN(grid[r][c].textContent))
     {  
      grid[r][c].textContent = '🚑';
     }
@@ -353,6 +353,7 @@ function handleCellEnter(r, c) {
 </script>
 </body>
 </html>
+
 
 
 
