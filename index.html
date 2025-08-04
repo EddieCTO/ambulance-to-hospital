@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Ambulance to Hospital v23</h2>
+<h2>Ambulance to Hospital v24</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -313,14 +313,14 @@ if (visitedSet.size === totalCells) {
     }
   }
 }
- else {
+  } 
+}else {
       message.textContent = '❌ Wrong number order!';
       grid[r][c].classList.add('invalid');
     }
-  }
 }
 
-
+}
 
   // Mouse and touch event handlers
   function onPointerDown(e) {
@@ -398,6 +398,7 @@ if (visitedSet.size === totalCells) {
 </script>
 </body>
 </html>
+
 
 
 
