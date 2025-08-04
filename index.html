@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Ambulance to Hospital v27</h2>
+<h2>Ambulance to Hospital v28</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -218,17 +218,9 @@
     if (timerInterval) clearInterval(timerInterval);
   }
 
-  function resetGame() {
+   function resetGame() {
     if (hintAnimating) return; // Prevent reset while hint animates
     createGrid();
-    for (let i = 0; i < gridSize; i++) {
-    for (let j = 0; j < gridSize; j++) {
-      const key = `${i},${j}`;
-      if (!visitedSet.has(key)) {
-        grid[i][j].style.border = '1px solid #ccc'; 
-    }
-  }
-    }
     const n = parseInt(difficultySelect.value);
     const path = generateHamiltonianPath();
     solutionPath = [...path];
@@ -399,6 +391,7 @@ if (visitedSet.size === totalCells) {
 </script>
 </body>
 </html>
+
 
 
 
