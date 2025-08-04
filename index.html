@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Ambulance to Hospital v18</h2>
+<h2>Ambulance to Hospital v19</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -246,9 +246,22 @@ function handleCellEnter(r, c) {
   const key = `${r},${c}`;
   grid[r][c].textContent = '🚑';
   const last = visitedPath.length ? visitedPath[visitedPath.length - 1] : null;
-  
-  if (visitedSet.has(key)) return; // no revisiting cells
-  if (last && !isAdjacent(last[0], last[1], r, c)) return; // only adjacent moves allowed
+  if (visitedSet.has(key)) {
+   if (last){
+    if(null==(grid[last[0]][last[1]].getAttribute("data-num")))
+    {
+     grid[last[0]][last[1]].textContent = '';
+    }}
+   return;
+   } // no revisiting cells
+  if (last && !isAdjacent(last[0], last[1], r, c)){
+   if (last){
+    if(null==(grid[last[0]][last[1]].getAttribute("data-num")))
+    {
+     grid[last[0]][last[1]].textContent = '';
+    }}
+  return;
+  }// only adjacent moves allowed
   visitedPath.push([r, c]);
   visitedSet.add(key);
       if (last) {
@@ -374,6 +387,7 @@ function handleCellEnter(r, c) {
 </script>
 </body>
 </html>
+
 
 
 
