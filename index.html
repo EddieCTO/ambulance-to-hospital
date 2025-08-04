@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Zip to Hospital v8</h2>
+<h2>Zip to Hospital v9</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -264,8 +264,8 @@ function handleCellEnter(r, c) {
      grid[r][c].textContent = '🚑';
     }
    if (last){
-    console.log (grid[last[0]][last[1]].getAttribute("data-num")); 
-    if(isNaN(grid[last[0]][last[1]].getAttribute("data-num")))
+
+    if(null==(grid[last[0]][last[1]].getAttribute("data-num")))
     {
      grid[last[0]][last[1]].textContent = 'X';
     }
@@ -353,6 +353,7 @@ function handleCellEnter(r, c) {
 </script>
 </body>
 </html>
+
 
 
 
