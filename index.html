@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<h2>Zip to Hospital v6</h2>
+<h2>Zip to Hospital v7</h2>
 <div id="controls">
   Difficulty: 
   <select id="difficulty">
@@ -146,6 +146,7 @@
         cell.textContent = '🏥';
       } else {
         cell.textContent = (i + 1);
+        cell.setAttribute("data-num",(i + 1));
       }
     }
   }
@@ -263,10 +264,13 @@ function handleCellEnter(r, c) {
      grid[r][c].textContent = '🚑';
     }
    if (last){
-    isNaN(grid[last[0]][last[1]].textContent)
+    isNaN(grid[last[0]][last[1]].getAttribute("data-num"))
     {
      grid[last[0]][last[1]].textContent = 'X';
     }
+     else { 
+           grid[last[0]][last[1]].textContent = grid[last[0]][last[1]].getAttribute("data-num");
+          }
    }
   }
 }
@@ -348,3 +352,4 @@ function handleCellEnter(r, c) {
 </script>
 </body>
 </html>
+
